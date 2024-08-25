@@ -4,7 +4,9 @@ from abc import ABC, abstractmethod
 
 from openai import OpenAI
 from tenacity import retry, stop_after_attempt, wait_random_exponential
+from dotenv import load_dotenv
 
+load_dotenv() 
 logging.basicConfig(format="%(asctime)s - %(message)s", level=logging.INFO)
 
 
@@ -16,9 +18,6 @@ class BaseSummarizationModel(ABC):
 
 class GPT3TurboSummarizationModel(BaseSummarizationModel):
     def __init__(self, model="gpt-4o"):
-        self.api_key = os.getenv("OPENAI_API_KEY")
-        if not self.api_key:
-            raise ValueError("API key not found. Please set the OPENAI_API_KEY environment variable.")
         self.model = model
 
     @retry(wait=wait_random_exponential(min=1, max=20), stop=stop_after_attempt(6))

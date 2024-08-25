@@ -1,8 +1,11 @@
 import os
 import threading
 from tqdm import tqdm  # 추가
+from dotenv import load_dotenv
 
+load_dotenv() 
 api_token = os.getenv("api_token")
+os.environ["OPENAI_API_KEY"] = str(os.getenv("OPENAI_API_KEY"))
 
 from raptor import RetrievalAugmentation, RetrievalAugmentationConfig
 import jsonlines
@@ -73,7 +76,7 @@ class CustomEmbeddingModel(BaseEmbeddingModel):
             else:
                 raise AttributeError("The model output does not have 'logits' or 'last_hidden_state' attributes.")
             embeddings.append(embedding)
-            return embeddings
+        return embeddings
         
 print("Starting model initialization...")
 custom_embedding = CustomEmbeddingModel()

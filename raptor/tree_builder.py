@@ -173,7 +173,7 @@ class TreeBuilder:
 
         embeddings = {
             model_name: model.create_embedding(text)
-            for model_name, model in tqdm(self.embedding_models.items(), desc="Creating embeddings")
+            for model_name, model in self.embedding_models.items()
         }
         return (index, Node(text, index, children_indices, embeddings))
 
