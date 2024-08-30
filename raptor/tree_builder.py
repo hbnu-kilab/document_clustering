@@ -1,6 +1,8 @@
+
 import copy
 import logging
 import os
+import numpy as np
 from abc import abstractclassmethod
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from threading import Lock
@@ -15,7 +17,7 @@ from .SummarizationModels import (BaseSummarizationModel,
 from .tree_structures import Node, Tree
 from .utils import (distances_from_embeddings, get_children, get_embeddings,
                     get_node_list, get_text,
-                    indices_of_nearest_neighbors_from_distances, split_text)
+                    indices_of_nearest_neighbors_from_distances, split_text, split_text_documents)
 
 logging.basicConfig(format="%(asctime)s - %(message)s", level=logging.INFO)
 
@@ -39,7 +41,7 @@ class TreeBuilderConfig:
         self.tokenizer = tokenizer
 
         if max_tokens is None:
-            max_tokens = 512
+            max_tokens = 100
         if not isinstance(max_tokens, int) or max_tokens < 1:
             raise ValueError("max_tokens must be an integer and at least 1")
         self.max_tokens = max_tokens
@@ -69,7 +71,7 @@ class TreeBuilderConfig:
         self.selection_mode = selection_mode
 
         if summarization_length is None:
-            summarization_length = 512
+            summarization_length = 100
         self.summarization_length = summarization_length
 
         if summarization_model is None:
@@ -154,28 +156,47 @@ class TreeBuilder:
             f"Successfully initialized TreeBuilder with Config {config.log_config()}"
         )
 
+    # def create_node(
+    #     self, index: Tuple[int, int], text: str, children_indices: Optional[Set[Tuple[int, int]]] = None
+    # ) -> Tuple[Tuple[int, int], Node]:
+    #     """Creates a new node with the given index, text, and (optionally) children indices.
+
+    #     Args:
+    #         index (Tuple[int, int]): The index of the new node, represented as a tuple (doc_index, chunk_index).
+    #         text (str): The text associated with the new node.
+    #         children_indices (Optional[Set[Tuple[int, int]]]): A set of indices representing the children of the new node.
+    #             If not provided, an empty set will be used.
+
+    #     Returns:
+    #         Tuple[Tuple[int, int], Node]: A tuple containing the index and the newly created node.
+    #     """
+    #     if children_indices is None:
+    #         children_indices = set()
+
+    #     # 임베딩 생성 및 numpy 배열로 변환
+    #     embeddings = {
+    #         model_name: model.create_embedding(text)
+    #         for model_name, model in self.embedding_models.items()
+    #     }
+    #     # 새로운 노드 생성 후 반환
+    #     return (index, Node(text, index, children_indices, embeddings))
     def create_node(
-        self, index: int, text: str, children_indices: Optional[Set[int]] = None
-    ) -> Tuple[int, Node]:
-        """Creates a new node with the given index, text, and (optionally) children indices.
+        self, index: Tuple[int, int], text: str, children_indices: Optional[Set[Tuple[int, int]]] = None
+    ) -> Tuple[Tuple[int, int], Node]:
+        """Creates a new node with the given index, text, and (optionally) children indices."""
 
-        Args:
-            index (int): The index of the new node.
-            text (str): The text associated with the new node.
-            children_indices (Optional[Set[int]]): A set of indices representing the children of the new node.
-                If not provided, an empty set will be used.
-
-        Returns:
-            Tuple[int, Node]: A tuple containing the index and the newly created node.
-        """
         if children_indices is None:
             children_indices = set()
 
-        embeddings = {
-            model_name: model.create_embedding(text)
-            for model_name, model in self.embedding_models.items()
-        }
+        # 임베딩 생성 및 numpy 배열로 변환
+        embeddings = {}
+        for model_name, model in self.embedding_models.items():
+            embedding = model.create_embedding(text)
+            embeddings[model_name] = embedding
+
+        # 새로운 노드 생성 후 반환
         return (index, Node(text, index, children_indices, embeddings))
+
 
     def create_embedding(self, text) -> List[float]:
         """
@@ -191,7 +212,7 @@ class TreeBuilder:
             text
         )
 
-    def summarize(self, context, max_tokens=512) -> str:
+    def summarize(self, context, max_tokens=150) -> str:
         """
         Generates a summary of the input context using the specified summarization model.
 
@@ -235,27 +256,59 @@ class TreeBuilder:
         return nodes_to_add
 
 
-    def multithreaded_create_leaf_nodes(self, chunks: List[str]) -> Dict[int, Node]:
-        """Creates leaf nodes using multithreading from the given list of text chunks.
+    # def multithreaded_create_leaf_nodes(self, chunks: Dict[int, List[str]]) -> Dict[Tuple[int, int], Node]:
+    #     """Creates leaf nodes using multithreading from the given dictionary of text chunks.
+
+    #     Args:
+    #         chunks (Dict[int, List[str]]): A dictionary where keys are document indices and values are lists of text chunks.
+
+    #     Returns:
+    #      Dict[Tuple[int, int], Node]: A dictionary mapping node indices (tuples of doc_index and chunk_index) to the corresponding leaf nodes.
+    #     """
+    #     leaf_nodes = {}
+
+    #     with ThreadPoolExecutor() as executor:
+    #         # 작업 제출 시 tqdm 진행률 표시
+    #         future_nodes = {
+    #             executor.submit(self.create_node, (doc_index, chunk_index), text): (doc_index, chunk_index)
+    #             for doc_index, chunk_list in tqdm(chunks.items(), desc="Submitting tasks")
+    #             for chunk_index, text in enumerate(chunk_list)
+    #         }
+
+    #     # 노드 생성 시 tqdm 진행률 표시
+    #         for future in tqdm(as_completed(future_nodes), total=len(future_nodes), desc="Creating leaf nodes"):
+    #             (doc_index, chunk_index), node = future.result()
+    #             leaf_nodes[(doc_index, chunk_index)] = node
+
+    #     return leaf_nodes
+
+    
+    def multithreaded_create_leaf_nodes(self, chunks: Dict[int, List[str]]) -> Dict[Tuple[int, int], Node]:
+        """Creates leaf nodes using multithreading from the given dictionary of text chunks.
 
         Args:
-         chunks (List[str]): A list of text chunks to be turned into leaf nodes.
+            chunks (Dict[int, List[str]]): A dictionary where keys are document indices and values are lists of text chunks.
 
-     Returns:
-            Dict[int, Node]: A dictionary mapping node indices to the corresponding leaf nodes.
+        Returns:
+        Dict[Tuple[int, int], Node]: A dictionary mapping node indices (tuples of doc_index and chunk_index) to the corresponding leaf nodes.
         """
         leaf_nodes = {}
-
-        with ThreadPoolExecutor() as executor:
-        # 첫 번째 tqdm: 작업이 제출되는 동안 진행률을 표시
+    
+        total_tasks = sum(len(chunks_list) for chunks_list in chunks.values())  # 총 작업 수 계산
+        print(total_tasks)
+        with ThreadPoolExecutor(max_workers=16) as executor:
             future_nodes = {
-                executor.submit(self.create_node, index, text): (index, text)
-                for index, text in enumerate(tqdm(chunks, desc="Submitting tasks"))
+                executor.submit(self.create_node, (doc_index, chunk_index), chunk): (doc_index, chunk_index)
+                for doc_index, chunk_list in chunks.items()
+                for chunk_index, chunk in enumerate(chunk_list)
             }
-            leaf_nodes = {}
-            for future in tqdm(as_completed(future_nodes), total=len(future_nodes), desc="Creating leaf nodes"):
-                index, node = future.result()
-                leaf_nodes[index] = node
+
+            # tqdm 바를 수동으로 업데이트하는 부분
+            with tqdm(total=total_tasks, desc="Creating leaf nodes") as pbar:
+                for future in as_completed(future_nodes):
+                    (doc_index, chunk_index), node = future.result()
+                    leaf_nodes[(doc_index, chunk_index)] = node
+                    pbar.update(1) 
 
         return leaf_nodes
 
@@ -271,18 +324,28 @@ class TreeBuilder:
         Returns:
             Tree: The golden tree structure.
         """
-        # chunks = split_text(text, self.tokenizer, self.max_tokens)
-        chunks = texts
+        chunks = split_text_documents(texts, self.tokenizer, self.max_tokens)
+        # chunks = texts
 
         logging.info("Creating Leaf Nodes")
 
         if use_multithreading:
             leaf_nodes = self.multithreaded_create_leaf_nodes(chunks)
         else:
+            # leaf_nodes = {}
+            # for index, text in enumerate(tqdm(chunks, desc="Creating leaf nodes")):
+            #     __, node = self.create_node(index, text)
+            #     leaf_nodes[index] = node
+            # leaf_nodes = {}
+            # for index, text in tqdm(chunks.items(), desc="Creating leaf nodes"):
+            #     __, node = self.create_node(index, text)
+            #     leaf_nodes[index] = node
             leaf_nodes = {}
-            for index, text in enumerate(tqdm(chunks, desc="Creating leaf nodes")):
-                __, node = self.create_node(index, text)
-                leaf_nodes[index] = node
+            for doc_index, chunks in tqdm(chunks.items(), desc="Creating leaf nodes"):
+                for chunk_index, text in enumerate(chunks):
+                    # 각 청크를 문자열로 처리하여 create_node 함수에 전달
+                    __, node = self.create_node([(doc_index, chunk_index)], text)  # chunk_index를 index로 사용
+                    leaf_nodes[(doc_index, chunk_index)] = node
 
         layer_to_nodes = {0: list(leaf_nodes.values())}
 

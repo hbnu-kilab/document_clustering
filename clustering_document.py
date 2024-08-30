@@ -21,9 +21,9 @@ if api_key is None:
 class CustomEmbeddingModel(BaseEmbeddingModel):
     def __init__(self, model_name="BAAI/bge-multilingual-gemma2"):
         self.model = SentenceTransformer(model_name, model_kwargs={"torch_dtype": torch.float16})
-
+ 
     def create_embedding(self, text):
-        return self.model.encode(text)   
+        return self.model.encode(text, show_progress_bar=False)   
         
 print("Starting model initialization...")
 custom_embedding = CustomEmbeddingModel()
