@@ -39,7 +39,7 @@ class TreeBuilderConfig:
         self.tokenizer = tokenizer
 
         if max_tokens is None:
-            max_tokens = 100
+            max_tokens = 512
         if not isinstance(max_tokens, int) or max_tokens < 1:
             raise ValueError("max_tokens must be an integer and at least 1")
         self.max_tokens = max_tokens
@@ -69,7 +69,7 @@ class TreeBuilderConfig:
         self.selection_mode = selection_mode
 
         if summarization_length is None:
-            summarization_length = 100
+            summarization_length = 512
         self.summarization_length = summarization_length
 
         if summarization_model is None:
@@ -191,7 +191,7 @@ class TreeBuilder:
             text
         )
 
-    def summarize(self, context, max_tokens=150) -> str:
+    def summarize(self, context, max_tokens=512) -> str:
         """
         Generates a summary of the input context using the specified summarization model.
 

@@ -3,7 +3,7 @@ import os
 
 from openai import OpenAI
 
-
+from dotenv import load_dotenv
 import getpass
 from abc import ABC, abstractmethod
 
@@ -27,7 +27,7 @@ class GPT3QAModel(BaseQAModel):
             model (str, optional): The GPT-3 model version to use for generating summaries. Defaults to "text-davinci-003".
         """
         self.model = model
-        self.client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
+        self.client = OpenAI(api_key = os.getenv("OPENAI_API_KEY"))
 
     @retry(wait=wait_random_exponential(min=1, max=20), stop=stop_after_attempt(6))
     def answer_question(self, context, question, max_tokens=150, stop_sequence=None):
@@ -69,7 +69,7 @@ class GPT3TurboQAModel(BaseQAModel):
             model (str, optional): The GPT-3 model version to use for generating summaries. Defaults to "text-davinci-003".
         """
         self.model = model
-        self.client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
+        self.client = OpenAI(api_key = os.getenv("OPENAI_API_KEY"))
 
     @retry(wait=wait_random_exponential(min=1, max=20), stop=stop_after_attempt(6))
     def _attempt_answer_question(
@@ -121,7 +121,7 @@ class GPT4QAModel(BaseQAModel):
             model (str, optional): The GPT-3 model version to use for generating summaries. Defaults to "text-davinci-003".
         """
         self.model = model
-        self.client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
+        self.client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
     @retry(wait=wait_random_exponential(min=1, max=20), stop=stop_after_attempt(6))
     def _attempt_answer_question(
