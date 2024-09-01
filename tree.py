@@ -19,12 +19,19 @@ tree = RA.tree
 
 # 최상위 노드(root nodes) 확인 및 모든 속성 출력
 root_nodes = tree.root_nodes  # 트리 객체의 root_nodes 속성 접근
+all_nodes = tree.all_nodes
 
-# 최상위 노드의 모든 속성 출력
-for root in root_nodes.values():
-    print(f"Node ID: {root.index}")
-    print(f"Text: {root.text}")
-    print(f"Children: {root.children}")
-    print(f"Embeddings: {root.embeddings}")
+# # 최상위 노드의 모든 속성 출력
+# for root in root_nodes.values():
+#     print(f"Node ID: {root.index}")
+#     print(f"Text: {root.text}")
+#     print(f"Children: {root.children}")
+#     print(f"Embeddings: {root.embeddings}")
+#     print("-" * 40)
+
+for all in all_nodes.values():
+    print(f"Node ID: {all.index}")
+    print(f"Text: {all.text}")
+    print(f"Children: {all.children}")
+    print(f"Embeddings: {all.embeddings}")
     print("-" * 40)
-
