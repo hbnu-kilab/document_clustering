@@ -3,24 +3,27 @@ import threading
 from tqdm import tqdm  # 추가
 from dotenv import load_dotenv
 from accelerate import Accelerator
-load_dotenv() 
-api_token = os.getenv("api_token")
-os.environ["OPENAI_API_KEY"] = str(os.getenv("OPENAI_API_KEY"))
-
 from raptor import RetrievalAugmentation, RetrievalAugmentationConfig
 import jsonlines
 from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
 import torch
 from raptor import BaseEmbeddingModel
-
+from openai import OpenAI
 from sentence_transformers import SentenceTransformer
 
+load_dotenv(dotenv_path='apikey.env')
+# 환경 변수에서 API 키 가져오기
+api_key = os.getenv("OPENAI_API_KEY")
+
+# API 키가 None이면 오류를 출력하고 프로그램 종료
+if api_key is None:
+    raise ValueError("API 키가 설정되지 않았습니다. .env 파일을 확인하세요.")
 class CustomEmbeddingModel(BaseEmbeddingModel):
     def __init__(self, model_name="BAAI/bge-multilingual-gemma2"):
         self.model = SentenceTransformer(model_name, model_kwargs={"torch_dtype": torch.float16})
-
+ 
     def create_embedding(self, text):
-        return self.model.encode(text)   
+        return self.model.encode(text, show_progress_bar=False)   
         
 print("Starting model initialization...")
 custom_embedding = CustomEmbeddingModel()

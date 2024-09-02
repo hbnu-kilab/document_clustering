@@ -6,7 +6,6 @@ from openai import OpenAI
 from tenacity import retry, stop_after_attempt, wait_random_exponential
 from dotenv import load_dotenv
 
-load_dotenv() 
 logging.basicConfig(format="%(asctime)s - %(message)s", level=logging.INFO)
 
 
@@ -19,6 +18,7 @@ class BaseSummarizationModel(ABC):
 class GPT3TurboSummarizationModel(BaseSummarizationModel):
     def __init__(self, model="gpt-4o"):
         self.model = model
+        
 
     @retry(wait=wait_random_exponential(min=1, max=20), stop=stop_after_attempt(6))
     def summarize(self, context, max_tokens=500, stop_sequence=None):
