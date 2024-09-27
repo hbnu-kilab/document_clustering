@@ -27,7 +27,7 @@ class TreeBuilderConfig:
         self,
         tokenizer=None,
         max_tokens=None,
-        num_layers=None,
+        num_layers=1,
         threshold=None,
         top_k=None,
         selection_mode=None,
