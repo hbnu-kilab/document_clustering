@@ -9,7 +9,7 @@ load_dotenv(dotenv_path='apikey.env')
 api_key = os.getenv("OPENAI_API_KEY")
 
 # 트리 저장 경로
-SAVE_PATH = 'C:/Users/USER/Desktop/clustering_doc/demo/doc'  # 실제 트리 파일 경로로 변경
+SAVE_PATH = 'C:/Users/이병호/Desktop/doc/document_clustering/demo/doc'  # 실제 트리 파일 경로로 변경
 
 # RetrievalAugmentation을 사용하여 트리 불러오기
 RA = RetrievalAugmentation(tree=SAVE_PATH)
@@ -27,11 +27,25 @@ all_nodes = tree.all_nodes
 #     print(f"Text: {root.text}")
 #     print(f"Children: {root.children}")
 #     print(f"Embeddings: {root.embeddings}")
-#     print("-" * 40)
+#     print("-" * 40
 
-for all in all_nodes.values():
-    print(f"Node ID: {all.index}")
-    print(f"Text: {all.text}")
-    print(f"Children: {all.children}")
-    print(f"Embeddings: {all.embeddings}")
-    print("-" * 40)
+for all in (all_nodes.values()):
+    if(len(all.children)==5):
+        print(f"Node ID: {all.index}")
+        print(f"Text: {all.text}")
+        print(f"Children: {all.children}")
+        print(f"Embeddings: {all.embeddings}")
+        print("-" * 40)
+        for all1 in (all_nodes.values()):
+            if(all1.index in all.children):
+                  print(f"ID:{all1.index} Text: {all1.text}")
+                  print("-" * 40)
+        import pdb; pdb.set_trace()
+
+# for all in all_nodes.values():
+#     print(f"Node ID: {all.index}")
+#     print(f"Text: {all.text}")
+#     print(f"Children: {all.children}")
+#     print(f"Embeddings: {all.embeddings}")
+#     print("-" * 40)
+#     import pdb; pdb.set_trace()
