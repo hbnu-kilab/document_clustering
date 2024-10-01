@@ -68,17 +68,19 @@ class ClusterTreeBuilder(TreeBuilder):
         ):
             node_texts = get_text(cluster)
 
-            summarized_text = self.summarize(
-                context=node_texts,
-                max_tokens=summarization_length,
-            )
+            # summarized_text = self.summarize(
+            #     context=node_texts,
+            #     max_tokens=summarization_length,
+            # )
 
             logging.info(
-                f"Node Texts Length: {len(self.tokenizer.encode(node_texts))}, Summarized Text Length: {len(self.tokenizer.encode(summarized_text))}"
+                # f"Node Texts Length: {len(self.tokenizer.encode(node_texts))}, Summarized Text Length: {len(self.tokenizer.encode(summarized_text))}"
+                f"Node Texts Length: {len(self.tokenizer.encode(node_texts))}"
             )
 
             __, new_parent_node = self.create_node(
-                next_node_index, summarized_text, {node.index for node in cluster}
+                # next_node_index, summarized_text, {node.index for node in cluster}
+                next_node_index, "summarized_text", {node.index for node in cluster}
             )
 
             with lock:

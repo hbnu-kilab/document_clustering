@@ -41,7 +41,7 @@ class TreeBuilderConfig:
         self.tokenizer = tokenizer
 
         if max_tokens is None:
-            max_tokens = 100
+            max_tokens = 8192
         if not isinstance(max_tokens, int) or max_tokens < 1:
             raise ValueError("max_tokens must be an integer and at least 1")
         self.max_tokens = max_tokens
@@ -283,7 +283,7 @@ class TreeBuilder:
     #     return leaf_nodes
 
     
-    def multithreaded_create_leaf_nodes(self, chunks: Dict[int, List[str]]) -> Dict[Tuple[int, int], Node]:
+    def multithreaded_create_leaf_nodes(self, ids: list,chunks: Dict[int, List[str]]) -> Dict[Tuple[int, int], Node]:
         """Creates leaf nodes using multithreading from the given dictionary of text chunks.
 
         Args:
@@ -298,7 +298,7 @@ class TreeBuilder:
         print(total_tasks)
         with ThreadPoolExecutor(max_workers=16) as executor:
             future_nodes = {
-                executor.submit(self.create_node, (doc_index, chunk_index), chunk): (doc_index, chunk_index)
+                executor.submit(self.create_node, (ids[doc_index], chunk_index), chunk): (doc_index, chunk_index)
                 for doc_index, chunk_list in chunks.items()
                 for chunk_index, chunk in enumerate(chunk_list)
             }
@@ -313,7 +313,7 @@ class TreeBuilder:
         return leaf_nodes
 
 
-    def build_from_text(self, texts: list, use_multithreading: bool = True) -> Tree:
+    def build_from_text(self, ids : list, texts: list, use_multithreading: bool = True) -> Tree:
         """Builds a golden tree from the input text, optionally using multithreading.
 
         Args:
@@ -324,13 +324,13 @@ class TreeBuilder:
         Returns:
             Tree: The golden tree structure.
         """
-        chunks = split_text_documents(texts, self.tokenizer, self.max_tokens)
-        # chunks = texts
+        # chunks = split_text_documents(texts, self.tokenizer, self.max_tokens)
+        chunks = texts
 
         logging.info("Creating Leaf Nodes")
 
         if use_multithreading:
-            leaf_nodes = self.multithreaded_create_leaf_nodes(chunks)
+            leaf_nodes = self.multithreaded_create_leaf_nodes(ids, chunks)
         else:
             # leaf_nodes = {}
             # for index, text in enumerate(tqdm(chunks, desc="Creating leaf nodes")):
@@ -341,12 +341,13 @@ class TreeBuilder:
             #     __, node = self.create_node(index, text)
             #     leaf_nodes[index] = node
             leaf_nodes = {}
-            for doc_index, chunks in tqdm(chunks.items(), desc="Creating leaf nodes"):
-                for chunk_index, text in enumerate(chunks):
-                    # 각 청크를 문자열로 처리하여 create_node 함수에 전달
-                    __, node = self.create_node([(doc_index, chunk_index)], text)  # chunk_index를 index로 사용
-                    leaf_nodes[(doc_index, chunk_index)] = node
-
+            for doc_index, doc_chunks in tqdm(chunks.items(), desc="Creating leaf nodes"):
+                doc_id = ids[doc_index]  # 문서 인덱스에 해당하는 ID를 가져옴
+            for chunk_index, text in enumerate(doc_chunks):
+            # 각 청크를 문자열로 처리하고 create_node 함수에 문서 ID와 청크 인덱스를 전달
+                __, node = self.create_node([(doc_id, chunk_index)], text)  # chunk_index를 index로 사용
+                leaf_nodes[(doc_id, chunk_index)] = node
+                
         layer_to_nodes = {0: list(leaf_nodes.values())}
 
         logging.info(f"Created {len(leaf_nodes)} Leaf Embeddings")

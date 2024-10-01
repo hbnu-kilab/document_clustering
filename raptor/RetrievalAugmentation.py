@@ -201,7 +201,7 @@ class RetrievalAugmentation:
             f"Successfully initialized RetrievalAugmentation with Config {config.log_config()}"
         )
 
-    def add_documents(self, docs):
+    def add_documents(self, ids, docs):
         """
         Adds documents to the tree and creates a TreeRetriever instance.
 
@@ -215,7 +215,7 @@ class RetrievalAugmentation:
             if user_input.lower() == "y":
                 # self.add_to_existing(docs)
                 return
-        self.tree = self.tree_builder.build_from_text(texts=docs)
+        self.tree = self.tree_builder.build_from_text(ids = ids, texts=docs)
         self.retriever = TreeRetriever(self.tree_retriever_config, self.tree)
 
     def retrieve(
@@ -224,7 +224,7 @@ class RetrievalAugmentation:
         start_layer: int = None,
         num_layers: int = None,
         top_k: int = 10,
-        max_tokens: int = 3500,
+        max_tokens: int = 8192,
         collapse_tree: bool = True,
         return_layer_information: bool = True,
     ):

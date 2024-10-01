@@ -35,16 +35,18 @@ custom_config = RetrievalAugmentationConfig(
 RA = RetrievalAugmentation(config=custom_config)
 
 def read_documents_from_jsonl(file_path):
+    ids = []
     documents = []
     with jsonlines.open(file_path) as reader:
         for obj in tqdm(reader, desc="Reading Documents"):  # tqdm 사용
             documents.append(obj['contents'])
-    return documents
+            ids.append(obj['id'])
+    return ids, documents
 
 jsonl_file_path = 'C:/Users/USER/Downloads/mrtydi-v1.1-korean/mrtydi-v1.1-korean/collection/docs.jsonl/docs1.jsonl'
-documents = read_documents_from_jsonl(jsonl_file_path)
+ids, documents = read_documents_from_jsonl(jsonl_file_path)
 
-RA.add_documents(documents) 
+RA.add_documents(ids,documents) 
 
 SAVE_PATH = "C:/Users/USER/Desktop/clustering_doc/demo/doc"
 RA.save(SAVE_PATH)
