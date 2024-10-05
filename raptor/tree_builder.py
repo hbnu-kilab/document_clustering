@@ -283,34 +283,56 @@ class TreeBuilder:
     #     return leaf_nodes
 
     
-    def multithreaded_create_leaf_nodes(self, ids: list,chunks: Dict[int, List[str]]) -> Dict[Tuple[int, int], Node]:
-        """Creates leaf nodes using multithreading from the given dictionary of text chunks.
-
+    def multithreaded_create_leaf_nodes(self, ids: List[str],chunks: List[str]) -> Dict[str, Node]:
+        """Creates leaf nodes using multithreading from the given list of text chunks.
         Args:
-            chunks (Dict[int, List[str]]): A dictionary where keys are document indices and values are lists of text chunks.
-
-        Returns:
-        Dict[Tuple[int, int], Node]: A dictionary mapping node indices (tuples of doc_index and chunk_index) to the corresponding leaf nodes.
+         chunks (List[str]): A list of text chunks to be turned into leaf nodes.
+     Returns:
+            Dict[int, Node]: A dictionary mapping node indices to the corresponding leaf nodes.
         """
         leaf_nodes = {}
-    
-        total_tasks = sum(len(chunks_list) for chunks_list in chunks.values())  # 총 작업 수 계산
-        print(total_tasks)
-        with ThreadPoolExecutor(max_workers=16) as executor:
-            future_nodes = {
-                executor.submit(self.create_node, (ids[doc_index], chunk_index), chunk): (doc_index, chunk_index)
-                for doc_index, chunk_list in chunks.items()
-                for chunk_index, chunk in enumerate(chunk_list)
-            }
 
-            # tqdm 바를 수동으로 업데이트하는 부분
-            with tqdm(total=total_tasks, desc="Creating leaf nodes") as pbar:
-                for future in as_completed(future_nodes):
-                    (doc_index, chunk_index), node = future.result()
-                    leaf_nodes[(doc_index, chunk_index)] = node
-                    pbar.update(1) 
+        with ThreadPoolExecutor() as executor:
+        # 첫 번째 tqdm: 작업이 제출되는 동안 진행률을 표시
+            future_nodes = {
+                executor.submit(self.create_node, ids[index], text): (index, text)
+                for index, text in enumerate(tqdm(chunks, desc="Submitting tasks"))
+            }
+            leaf_nodes = {}
+            for future in tqdm(as_completed(future_nodes), total=len(future_nodes), desc="Creating leaf nodes"):
+                index, node = future.result()
+                leaf_nodes[index] = node
 
         return leaf_nodes
+    
+    # def multithreaded_create_leaf_nodes(self, ids: list,chunks: List[str]) -> Dict[int, Node]:
+    #     """Creates leaf nodes using multithreading from the given dictionary of text chunks.
+
+    #     Args:
+    #         chunks (Dict[int, List[str]]): A dictionary where keys are document indices and values are lists of text chunks.
+
+    #     Returns:
+    #     Dict[Tuple[int, int], Node]: A dictionary mapping node indices (tuples of doc_index and chunk_index) to the corresponding leaf nodes.
+    #     """
+    #     leaf_nodes = {}
+    
+    #     total_tasks = sum(len(chunks_list) for chunks_list in chunks.values())  # 총 작업 수 계산
+    #     print(total_tasks)
+    #     with ThreadPoolExecutor(max_workers=16) as executor:
+    #         future_nodes = {
+    #             executor.submit(self.create_node, (ids[doc_index]), chunk): (doc_index)
+    #             for doc_index, chunk_list in chunks.items()
+    #             for chunk_index, chunk in enumerate(chunk_list)
+    #         }
+
+    #         # tqdm 바를 수동으로 업데이트하는 부분
+    #         with tqdm(total=total_tasks, desc="Creating leaf nodes") as pbar:
+    #             for future in as_completed(future_nodes):
+    #                 (doc_index, chunk_index), node = future.result()
+    #                 leaf_nodes[(doc_index, chunk_index)] = node
+    #                 pbar.update(1) 
+
+    #     return leaf_nodes
 
 
     def build_from_text(self, ids : list, texts: list, use_multithreading: bool = True) -> Tree:

@@ -41,7 +41,8 @@ class ClusterTreeConfig(TreeBuilderConfig):
 class ClusterTreeBuilder(TreeBuilder):
     def __init__(self, config) -> None:
         super().__init__(config)
-
+        
+        self.count_summary = 0
         if not isinstance(config, ClusterTreeConfig):
             raise ValueError("config must be an instance of ClusterTreeConfig")
         self.reduction_dimension = config.reduction_dimension
@@ -64,28 +65,31 @@ class ClusterTreeBuilder(TreeBuilder):
         next_node_index = len(all_tree_nodes)
 
         def process_cluster(
-            cluster, new_level_nodes, next_node_index, summarization_length, lock
+            cluster, new_level_nodes, next_node_index, summarization_length, lock, count_summary
         ):
             node_texts = get_text(cluster)
-
-            # summarized_text = self.summarize(
-            #     context=node_texts,
-            #     max_tokens=summarization_length,
-            # )
 
             logging.info(
                 # f"Node Texts Length: {len(self.tokenizer.encode(node_texts))}, Summarized Text Length: {len(self.tokenizer.encode(summarized_text))}"
                 f"Node Texts Length: {len(self.tokenizer.encode(node_texts))}"
             )
-
-            __, new_parent_node = self.create_node(
-                # next_node_index, summarized_text, {node.index for node in cluster}
+            if count_summary < 21:
+                summarized_text = self.summarize(
+                context=node_texts,
+                max_tokens=summarization_length,
+                )
+                __, new_parent_node = self.create_node(  
+                next_node_index, summarized_text, {node.index for node in cluster}
+                )
+                count_summary += 1
+            else:
+                 __, new_parent_node = self.create_node(
                 next_node_index, "summarized_text", {node.index for node in cluster}
-            )
-
+                 )
             with lock:
                 new_level_nodes[next_node_index] = new_parent_node
 
+        count_summary = 0
         for layer in range(self.num_layers):
 
             new_level_nodes = {}
@@ -123,7 +127,9 @@ class ClusterTreeBuilder(TreeBuilder):
                             next_node_index,
                             summarization_length,
                             lock,
+                            count_summary,
                         )
+                        count_summary += 1
                         next_node_index += 1
                     executor.shutdown(wait=True)
 
@@ -135,7 +141,9 @@ class ClusterTreeBuilder(TreeBuilder):
                         next_node_index,
                         summarization_length,
                         lock,
+                        count_summary,
                     )
+                    count_summary += 1
                     next_node_index += 1
 
             layer_to_nodes[layer + 1] = list(new_level_nodes.values())
